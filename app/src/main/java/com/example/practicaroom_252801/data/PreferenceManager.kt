@@ -1,0 +1,20 @@
+package com.example.practicaroom_252801.data
+
+import android.content.Context
+import androidx.core.content.edit
+
+class PreferenceManager(context: Context) {
+    private val sharedPreferences = context.getSharedPreferences("session_prefs", Context.MODE_PRIVATE)
+
+    fun saveLoginStatus(isLoggedIn: Boolean){
+        sharedPreferences.edit { putBoolean("isLoggedIn", true) }
+    }
+
+    fun isLoggedIn(): Boolean{
+        return sharedPreferences.getBoolean("isLoggedIn", false)
+    }
+
+    fun logout(){
+        sharedPreferences.edit { clear().apply() }
+    }
+}
