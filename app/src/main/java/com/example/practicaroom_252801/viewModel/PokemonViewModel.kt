@@ -1,12 +1,14 @@
 package com.example.practicaroom_252801.viewModel
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.practicaroom_252801.data.PokemonEntity
 import com.example.practicaroom_252801.data.PokemonRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -39,6 +41,7 @@ class PokemonViewModel(private val repository: PokemonRepository) : ViewModel() 
         PokemonEntity(name = "Iron Valiant", number = "1006", type = "Hada"),
         PokemonEntity(name = "Koraidon", number = "1007", type = "Lucha")
     )
+    val pokemonTypes = listOf("Todos", "Fuego", "Agua", "Planta", "Eléctrico", "Lucha", "Normal", "Veneno", "Psíquico", "Roca", "Fantasma", "Acero", "Hada", "Dragón")
 
     var wildPokemon by mutableStateOf<PokemonEntity?>(null)
         private set
@@ -49,12 +52,33 @@ class PokemonViewModel(private val repository: PokemonRepository) : ViewModel() 
     var pokemonSeEscapo by mutableStateOf(false)
         private set
 
+    var searchQuery by mutableStateOf("")
+        private set
+
+    var selectedType by mutableStateOf("Todos")
+        private set
+
+    var minLevel by mutableFloatStateOf(1f)
+        private set
+
     fun searchPokemon(){
         wildPokemon = availablePokemons.random()
     }
 
     fun releaseCapturedPokemons(){
         capturedPokemons = emptyList()
+    }
+
+    fun onSearchQueryChange(newQuery: String) {
+        searchQuery = newQuery
+    }
+
+    fun onTypeChange(newType: String) {
+        selectedType = newType
+    }
+
+    fun onMinLevelChange(newLevel: Float) {
+        minLevel = newLevel
     }
 
     fun capturePokemon(){
@@ -74,7 +98,7 @@ class PokemonViewModel(private val repository: PokemonRepository) : ViewModel() 
     val pokemonsState: StateFlow<List<PokemonEntity>> = repository.allPokemons
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
+            started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
@@ -89,5 +113,41 @@ class PokemonViewModel(private val repository: PokemonRepository) : ViewModel() 
                 )
             )
         }
+    }
+
+    fun deletePokemon(pokemon: PokemonEntity) {
+        viewModelScope.launch { repository.delete(pokemon) }
+    }
+
+    fun updateLevel(pokemon: PokemonEntity) {
+        if (pokemon.level < 100) {
+            val exito = (1..100).random()
+            if (exito <= 70) {
+                viewModelScope.launch {
+                    val pokemonActualizado = pokemon.copy(level = pokemon.level + 1)
+                    repository.update(pokemonActualizado)
+                }
+            }
+        }
+    }
+
+    fun getFilteredList(): Flow<List<PokemonEntity>> {
+        return repository.getFilteredPokemons(
+            query = "%$searchQuery%",
+            minLevel = minLevel.toInt(),
+            type = selectedType
+        )
+    }
+
+    fun resetFilters() {
+        onSearchQueryChange("")
+        onTypeChange("Todos")
+        onMinLevelChange(1f)
+    }
+
+    fun resetCaptureState() {
+        wildPokemon = null
+        pokemonSeEscapo = false
+        releaseCapturedPokemons()
     }
 }
